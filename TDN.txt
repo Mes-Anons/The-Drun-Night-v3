@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>THE DRUN NIGHT</title>
+<style>
+• { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; -webkit-touch-callout: none; }
+body {
+background: #050505; color: #ddd; font-family: 'Courier New', Courier, monospace;
+overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+height: 100vh; width: 100vw; user-select: none;
+}
+#game-wrapper {
+position: relative; width: 100%; max-width: 100vw; height: 100vh;
+display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+#game-container {
+position: relative; width: 100%; max-width: 960px; aspect-ratio: 16/9;
+background: #000; image-rendering: pixelated; box-shadow: 0 0 40px rgba(0,0,0,0.9);
+}
+canvas { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.controls {
+position: absolute; bottom: 4px; left: 0; width: 100%; height: 130px;
+pointer-events: none; display: flex; justify-content: space-between; align-items: flex-end;
+padding: 0 12px; z-index: 10;
+}
+.dpad { position: relative; width: 110px; height: 110px; pointer-events: auto; flex-shrink: 0; }
+.dpad-btn {
+position: absolute; width: 36px; height: 36px; background: rgba(255,255,255,0.12);
+border: 2px solid rgba(255,255,255,0.25); border-radius: 6px;
+display: flex; align-items: center; justify-content: center;
+font-size: 14px; color: rgba(255,255,255,0.5); cursor: pointer;
+}
+.dpad-btn:active { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.6); }
+.dpad-up { top: 0; left: 37px; }
+.dpad-down { bottom: 0; left: 37px; }
+.dpad-left { top: 37px; left: 0; }
+.dpad-right { top: 37px; right: 0; }
+.action-buttons { position: relative; width: 130px; height: 110px; pointer-events: auto; flex-shrink: 0; }
+.psp-btn {
+position: absolute; width: 40px; height: 40px; border-radius: 50%;
+border: 2px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center;
+font-size: 14px; font-weight: bold; color: rgba(255,255,255,0.85); cursor: pointer; text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+.psp-btn:active { filter: brightness(1.6); transform: scale(0.95); }
+.btn-tri { top: 0; left: 45px; background: rgba(0,180,255,0.2); border-color: rgba(0,180,255,0.5); color: #8df; }
+.btn-cir { top: 35px; right: 0; background: rgba(255,60,60,0.2); border-color: rgba(255,60,60,0.5); color: #f88; }
+.btn-x { bottom: 0; left: 45px; background: rgba(60,255,120,0.2); border-color: rgba(60,255,120,0.5); color: #8f8; }
+.btn-sq { top: 35px; left: 0; background: rgba(255,220,60,0.2); border-color: rgba(255,220,60,0.5); color: #ff8; }
+#ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+#day-indicator { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.75); padding: 4px 10px; border: 1px solid #333; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #aaa; }
+#clock-display { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.75); padding: 4px 10px; border: 1px solid #333; font-size: 13px; font-family: monospace; color: #f55; text-shadow: 0 0 4px rgba(255,50,50,0.4); }
+#dialog-box { position: absolute; bottom: 140px; left: 8px; right: 8px; background: rgba(5,5,5,0.92); border: 2px solid #444; border-left: 3px solid #666; padding: 10px 14px; font-size: 13px; line-height: 1.45; color: #ccc; display: none; pointer-events: none; min-height: 50px; }
+#dialog-name { color: #8af; font-weight: bold; margin-bottom: 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+#hint-text { position: absolute; bottom: 142px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 3px 10px; font-size: 10px; color: #888; display: none; border-radius: 4px; }
+#screamer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; z-index: 100; align-items: center; justify-content: center; flex-direction: column; }
+#screamer-text { font-size: 48px; color: #ff0000; text-align: center; font-weight: bold; text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000; animation: shake 0.1s infinite; margin-top: 20px; }
+@keyframes shake { 0%{transform:translate(0,0)} 25%{transform:translate(-3px,2px)} 50%{transform:translate(3px,-2px)} 75%{transform:translate(-2px,-3px)} 100%{transform:translate(2px,3px)} }
+#title-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; }
+#title-screen h1 { font-size: 28px; letter-spacing: 6px; color: #666; margin-bottom: 20px; text-transform: uppercase; }
+#title-screen .start-btn { margin-top: 30px; padding: 10px 30px; border: 2px solid #444; background: rgba(255,255,255,0.05); color: #888; font-family: inherit; font-size: 14px; cursor: pointer; letter-spacing: 2px; }
+#title-screen .start-btn:active { background: rgba(255,255,255,0.15); color: #fff; }
+#title-screen p { font-size: 10px; color: #333; margin-top: 15px; max-width: 260px; text-align: center; line-height: 1.4; }
+.noise-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 4; opacity: 0.03; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+</style>
+</head>
+<body>
+<div id="game-wrapper">
+<div id="game-container">
+<canvas id="game" width="320" height="180"></canvas>
+<div class="noise-overlay"></div>
+<div id="title-screen">
+<h1>THE DRUN NIGHT</h1>
+<div style="font-size:10px;color:#333;letter-spacing:3px;">ХОРРОР · 7 ДНЕЙ · ВЫЖИВАНИЕ</div>
+<button class="start-btn" onclick="startGame()">НАЧАТЬ ИГРУ</button>
+<p>Управление: крестовина — ходить, ✕ — действие/взаимодействие, ○ — бег/скрыться, □ — пропуск диалога</p>
+</div>
+<div id="ui-layer">
+<div id="day-indicator">ДЕНЬ 1</div>
+<div id="clock-display">18:00</div>
+<div id="dialog-box"><div id="dialog-name"></div><div id="dialog-text"></div></div>
+<div id="hint-text">Нажми ✕ для взаимодействия</div>
+</div>
+<div id="screamer">
+<canvas id="screamer-canvas" width="320" height="180" style="width:100%;height:auto;max-height:60%;image-rendering:pixelated;"></canvas>
+<div id="screamer-text">АААААААААААААААААА!!!</div>
+</div>
+<div class="controls">
+<div class="dpad">
+<div class="dpad-btn dpad-up" data-key="up">▲</div>
+<div class="dpad-btn dpad-down" data-key="down">▼</div>
+<div class="dpad-btn dpad-left" data-key="left">◀</div>
+<div class="dpad-btn dpad-right" data-key="right">▶</div>
+</div>
+<div class="action-buttons">
+<div class="psp-btn btn-tri" data-key="tri">△</div>
+<div class="psp-btn btn-cir" data-key="cir">○</div>
+<div class="psp-btn btn-x" data-key="x">✕</div>
+<div class="psp-btn btn-sq" data-key="sq">□</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+
+// ==================== ENGINE ====================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const W = 320, H = 180;
+let lastTime = 0;
+let gameRunning = false;
+
+// Input
+const keys = { up: false, down: false, left: false, right: false, x: false, cir: false, tri: false, sq: false };
+const keysPressed = { x: false, cir: false, tri: false, sq: false };
+
+document.querySelectorAll('.dpad-btn, .psp-btn').forEach(btn => {
+const k = btn.dataset.key;
+const start = (e) => { e.preventDefault(); keys[k] = true; };
+const end = (e) => { e.preventDefault(); keys[k] = false; keysPressed[k] = false; };
+btn.addEventListener('touchstart', start, {passive: false});
+btn.addEventListener('touchend', end, {passive: false});
+btn.addEventListener('mousedown', start);
+btn.addEventListener('mouseup', end);
+btn.addEventListener('mouseleave', end);
+});
+
+window.addEventListener('keydown', e => {
+if(e.key === 'ArrowUp' || e.key === 'w') keys.up = true;
+if(e.key === 'ArrowDown' || e.key === 's') keys.down = true;
+if(e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+if(e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+if(e.key === 'z' || e.key === 'k') { if(!keys.x) keysPressed.x = true; keys.x = true; }
+if(e.key === 'x' || e.key === 'l') { if(!keys.cir) keysPressed.cir = true; keys.cir = true; }
+if(e.key === 'c' || e.key === 'i') { if(!keys.tri) keysPressed.tri = true; keys.tri = true; }
+if(e.key === 'v' || e.key === 'j') { if(!keys.sq) keysPressed.sq = true; keys.sq = true; }
+});
+window.addEventListener('keyup', e => {
+if(e.key === 'ArrowUp' || e.key === 'w') keys.up = false;
+if(e.key === 'ArrowDown' || e.key === 's') keys.down = false;
+if(e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+if(e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+if(e.key === 'z' || e.key === 'k') { keys.x = false; keysPressed.x = false; }
+if(e.key === 'x' || e.key === 'l') { keys.cir = false; keysPressed.cir = false; }
+if(e.key === 'c' || e.key === 'i') { keys.tri = false; keysPressed.tri = false; }
+if(e.key === 'v' || e.key === 'j') { keys.sq = false; keysPressed.sq = false; }
+});
+
+// ==================== GAME STATE ====================
+let G = {
+day: 1, hour: 18, minute: 0,
+state: 'title',
+room: 'living',
+player: { x: 160, y: 130, vx: 0, vy: 0, dir: 'down', frame: 0, hidden: false },
+friends: [], monsters: [],
+dialogQueue: [], dialogIndex: 0, dialogTyping: false,
+dialogText: '', dialogTarget: '', dialogChar: 0, dialogName: '',
+flicker: 0, shake: 0, hideTimer: 0,
+chaseActive: false, chaseTimer: 0,
+endingTimer: 0, screamerPhase: 0,
+timeScale: 1, hint: '', hintTimer: 0,
+distort: 0, distortTimer: 0,
+randomSeed: 12345, eventFlags: {}
+};
+
+function rng() {
+G.randomSeed = (G.randomSeed * 16807 + 0) % 2147483647;
+return G.randomSeed / 2147483647;
+}
+
+// ==================== ROOMS ====================
+const ROOMS = {
+living: {
+name: 'Гостиная', w: 320, h: 180, color: '#1a1510', floor: '#2a2018',
+walls: [{x:0,y:0,w:320,h:40},{x:0,y:0,w:20,h:180},{x:300,y:0,w:20,h:180},{x:0,y:160,w:320,h:20}],
+doors: [
+{ to: 'corridor', x: 140, y: 0, w: 40, h: 8, side: 'top' },
+{ to: 'kitchen', x: 300, y: 80, w: 8, h: 40, side: 'right' }
+ ],
+objects: [
+{ id: 'sofa', x: 60, y: 100, w: 80, h: 30, color: '#3a3028', name: 'Диван', interact: true },
+{ id: 'tv', x: 130, y: 45, w: 60, h: 35, color: '#111', name: 'Телевизор', interact: true },
+{ id: 'window_liv', x: 250, y: 45, w: 40, h: 30, color: '#0a0a15', name: 'Окно', interact: true },
+{ id: 'table', x: 200, y: 110, w: 50, h: 25, color: '#3a2820', name: 'Стол', interact: false },
+{ id: 'plant', x: 30, y: 130, w: 15, h: 20, color: '#1a3a1a', name: 'Растение', interact: false }
+ ],
+hideSpots: [{id:'sofa',x:60,y:100,w:80,h:30}]
+},
+kitchen: {
+name: 'Кухня', w: 200, h: 160, color: '#151a15', floor: '#1a2018',
+walls: [{x:0,y:0,w:200,h:30},{x:0,y:0,w:10,h:160},{x:190,y:0,w:10,h:160},{x:0,y:140,w:200,h:20}],
+doors: [{ to: 'living', x: 0, y: 60, w: 8, h: 40, side: 'left' }],
+objects: [
+{ id: 'fridge', x: 20, y: 40, w: 40, h: 70, color: '#2a2a2a', name: 'Холодильник', interact: true },
+{ id: 'sink', x: 120, y: 40, w: 50, h: 25, color: '#333', name: 'Раковина', interact: true },
+{ id: 'stove', x: 80, y: 40, w: 35, h: 25, color: '#222', name: 'Плита', interact: false },
+{ id: 'window_kit', x: 140, y: 35, w: 30, h: 25, color: '#0a0a15', name: 'Окно', interact: true }
+ ],
+hideSpots: []
+},
+corridor: {
+name: 'Коридор', w: 120, h: 220, color: '#121212', floor: '#1a1a1a',
+walls: [{x:0,y:0,w:120,h:20},{x:0,y:0,w:15,h:220},{x:105,y:0,w:15,h:220},{x:0,y:200,w:120,h:20}],
+doors: [
+{ to: 'living', x: 40, y: 200, w: 40, h: 8, side: 'bottom' },
+{ to: 'bedroom', x: 0, y: 80, w: 8, h: 40, side: 'left' },
+{ to: 'bathroom', x: 105, y: 80, w: 8, h: 40, side: 'right' }
+ ],
+objects: [
+{ id: 'closet', x: 30, y: 40, w: 50, h: 35, color: '#2a2018', name: 'Шкаф', interact: true },
+{ id: 'shoes', x: 70, y: 170, w: 30, h: 15, color: '#222', name: 'Обувь', interact: false },
+{ id: 'mirror_corr', x: 80, y: 50, w: 15, h: 25, color: '#1a1a20', name: 'Зеркало', interact: true }
+ ],
+hideSpots: [{id:'closet',x:30,y:40,w:50,h:35}]
+},
+bedroom: {
+name: 'Спальня', w: 200, h: 160, color: '#181015', floor: '#20181a',
+walls: [{x:0,y:0,w:200,h:30},{x:0,y:0,w:10,h:160},{x:190,y:0,w:10,h:160},{x:0,y:140,w:200,h:20}],
+doors: [{ to: 'corridor', x: 190, y: 60, w: 8, h: 40, side: 'right' }],
+objects: [
+{ id: 'bed', x: 40, y: 80, w: 80, h: 50, color: '#2a2028', name: 'Кровать', interact: true },
+{ id: 'desk', x: 140, y: 50, w: 40, h: 25, color: '#2a2018', name: 'Стол', interact: false },
+{ id: 'window_bed', x: 80, y: 35, w: 40, h: 25, color: '#0a0a15', name: 'Окно', interact: true },
+{ id: 'lamp', x: 150, y: 45, w: 12, h: 12, color: '#443', name: 'Лампа', interact: true }
+ ],
+hideSpots: [{id:'bed',x:40,y:80,w:80,h:50}]
+},
+bathroom: {
+name: 'Ванная', w: 140, h: 120, color: '#101518', floor: '#151a1a',
+walls: [{x:0,y:0,w:140,h:20},{x:0,y:0,w:10,h:120},{x:130,y:0,w:10,h:120},{x:0,y:100,w:140,h:20}],
+doors: [{ to: 'corridor', x: 0, y: 40, w: 8, h: 40, side: 'left' }],
+objects: [
+{ id: 'toilet', x: 100, y: 60, w: 25, h: 30, color: '#222', name: 'Туалет', interact: false },
+{ id: 'bath', x: 20, y: 40, w: 50, h: 40, color: '#1a2228', name: 'Ванна', interact: true },
+{ id: 'mirror_bath', x: 70, y: 30, w: 20, h: 25, color: '#1a1a20', name: 'Зеркало', interact: true }
+ ],
+hideSpots: [{id:'bath',x:20,y:40,w:50,h:40}]
+}
+};
+
+const SPAWN = {
+living: {x: 160, y: 130}, kitchen: {x: 40, y: 80},
+corridor: {x: 60, y: 180}, bedroom: {x: 100, y: 100}, bathroom: {x: 40, y: 60}
+};
+
+// ==================== FRIENDS & MONSTERS ====================
+function initFriends() {
+G.friends = [
+{ name: 'Дима', x: 200, y: 110, color: '#a44', shirt: '#a44', hair: '#432', face: '#cba',
+personality: 'весельчак', tx: 200, ty: 110, timer: 0 },
+{ name: 'Артем', x: 80, y: 100, color: '#48a', shirt: '#48a', hair: '#222', face: '#cba',
+personality: 'скептик', tx: 80, ty: 100, timer: 0 },
+{ name: 'Кирилл', x: 140, y: 120, color: '#4a4', shirt: '#4a4', hair: '#654', face: '#cba',
+personality: 'трус', tx: 140, ty: 120, timer: 0 }
+ ];
+}
+
+function initMonsters() {
+G.monsters = [
+{ name: 'Дима', x: 50, y: 50, tx: 50, ty: 50, speed: 0.4, color: '#511', state: 'hunt', timer: 0, room: 'living' },
+{ name: 'Артем', x: 250, y: 150, tx: 250, ty: 150, speed: 0.35, color: '#115', state: 'hunt', timer: 0, room: 'kitchen' },
+{ name: 'Кирилл', x: 150, y: 100, tx: 150, ty: 100, speed: 0.5, color: '#151', state: 'hunt', timer: 0, room: 'corridor' }
+ ];
+}
+
+// ==================== DIALOG ====================
+function say(name, text, auto = false) {
+G.dialogQueue.push({name, text, auto});
+if(G.state !== 'dialog') {
+G.state = 'dialog';
+G.dialogIndex = 0;
+nextDialog();
+}
+}
+
+function nextDialog() {
+if(G.dialogIndex >= G.dialogQueue.length) {
+G.dialogQueue = []; G.dialogIndex = 0;
+G.state = G.chaseActive ? 'chase' : 'gameplay';
+document.getElementById('dialog-box').style.display = 'none';
+return;
+}
+const d = G.dialogQueue[G.dialogIndex];
+G.dialogName = d.name; G.dialogTarget = d.text;
+G.dialogText = ''; G.dialogChar = 0; G.dialogTyping = true;
+document.getElementById('dialog-name').textContent = d.name;
+document.getElementById('dialog-box').style.display = 'block';
+G.dialogIndex++;
+}
+
+function updateDialog(dt) {
+if(!G.dialogTyping) {
+if(keysPressed.x || keysPressed.sq) { keysPressed.x = false; keysPressed.sq = false; nextDialog(); }
+return;
+}
+G.dialogChar += dt * 35;
+if(G.dialogChar >= G.dialogTarget.length) {
+G.dialogText = G.dialogTarget; G.dialogTyping = false;
+} else {
+G.dialogText = G.dialogTarget.slice(0, Math.floor(G.dialogChar));
+}
+document.getElementById('dialog-text').textContent = G.dialogText;
+if(keysPressed.x || keysPressed.sq) {
+keysPressed.x = false; keysPressed.sq = false;
+G.dialogText = G.dialogTarget; G.dialogTyping = false;
+}
+}
+
+// ==================== TIME ====================
+function updateTime(dt) {
+if(G.state === 'screamer' || G.state === 'ending') return;
+G.minute += dt * 2 * G.timeScale;
+if(G.minute >= 60) { G.minute = 0; G.hour++; }
+if(G.hour >= 24) { G.hour = 18; G.minute = 0; G.day++; dayTransition(); }
+document.getElementById('clock-display').textContent = String(G.hour).padStart(2,'0') + ':' + String(Math.floor(G.minute)).padStart(2,'0');
+document.getElementById('day-indicator').textContent = 'ДЕНЬ ' + G.day;
+}
+
+function dayTransition() {
+G.state = 'transition'; G.flicker = 1;
+setTimeout(() => { setupDay(G.day); G.state = 'gameplay'; G.flicker = 0; }, 2000);
+}
+
+// ==================== DAY SETUP ====================
+function setupDay(day) {
+G.room = 'living';
+G.player.x = SPAWN.living.x; G.player.y = SPAWN.living.y;
+G.chaseActive = false; G.monsters = []; G.distort = 0; G.player.hidden = false;
+G.eventFlags = {};
+
+if(day === 1) {
+say('Мама', 'Мы уезжаем на дачу на неделю. Будь умницей, хорошо? Еда в холодильнике.');
+G.timeScale = 3;
+}
+if(day === 2) {
+say('','День 2. Вчерашняя ночь казалась странной...');
+G.timeScale = 3;
+}
+if(day === 3) {
+initFriends();
+say('Дима', 'Йоу! Мы пришли к тебе на ночевку! Неужели тебе правда было страшно одному?');
+say('Артем', 'Он просто переиграл в хорроры. Ладно, где твой диван?');
+say('Кирилл', 'Ребят... здесь как-то душно. Или мне кажется?');
+G.timeScale = 3;
+}
+if(day === 4) {
+say('','День 4. Друзья ведут себя... иначе.');
+G.timeScale = 4;
+}
+if(day === 5) {
+say('','День 5. Воздух в квартире стал тяжелым. Дышать трудно.');
+G.timeScale = 4;
+}
+if(day === 6) {
+say('','День 6. Реальность искажается. Друзья почти не мигают.');
+G.timeScale = 5;
+}
+if(day === 7) {
+say('','ДЕНЬ 7. Полночь приближается...');
+G.hour = 20; G.minute = 0; G.timeScale = 10;
+setTimeout(() => {
+G.state = 'dialog';
+say('Дима', '...', true);
+setTimeout(() => {
+say('Дима', 'ТЫ... ЗНАЕШЬ... ЧТО МЫ ТАКОЕ?', true);
+setTimeout(() => {
+G.friends = []; initMonsters(); G.chaseActive = true; G.state = 'chase';
+say('','БЕГИ. ПРЯЧЬСЯ. ВЫЖИВИ ДО ПОЛУНОЧИ.');
+}, 3000);
+}, 2000);
+}, 1000);
+}
+}
+
+// ==================== INTERACTIONS ====================
+function interact() {
+const room = ROOMS[G.room];
+let target = null, bestDist = 999;
+for(let o of room.objects) {
+if(!o.interact) continue;
+const cx = o.x + o.w/2, cy = o.y + o.h/2;
+const d = Math.hypot(cx - G.player.x, cy - G.player.y);
+if(d < 40 && d < bestDist) { bestDist = d; target = o; }
+}
+if(!target) return;
+const id = target.id;
+
+if(id === 'tv') {
+if(G.day <= 2) { say('','Телевизор показывает только белый шум... Или там кто-то есть?'); G.flicker = 0.5; }
+else if(G.day <= 6) { say('','На экране — твое отражение. Оно моргает с задержкой на секунду.'); G.distort = 1; }
+else say('','Телевизор показывает твою комнату. Сзади стоит ТО, что раньше было Димой.');
+}
+if(id === 'window_liv' || id === 'window_kit' || id === 'window_bed') {
+if(G.day === 1) say('','В окне напротив кто-то стоит. Не двигаясь. Смотрит сюда.');
+else if(G.day === 2) say('','Фигура приблизилась. Теперь видно, что это... нет, не может быть.');
+else if(G.day <= 6) say('','Окно запотело. На стекле чей-то палец вывел слово: ОСТАНЬСЯ');
+else say('','Улицы нет. Только черная пустота.');
+}
+if(id === 'fridge') {
+if(G.day <= 2) say('','Холодильник пуст. Ты же заполнял его вчера...');
+else if(G.day <= 6) say('','Внутри что-то мокрое и теплое. Пахнет железом.');
+else say('','Холодильник дышит.');
+}
+if(id === 'bed') {
+if(G.day <= 2) say('','Ты ложишься, но сон не идет. Слышишь шаги в коридоре.');
+else if(G.day <= 6) say('','Кровать трясется. Из-под нее доносится шепот.');
+else say('','ПРЯТАТЬСЯ ПОД КРОВАТЬЮ — ○');
+}
+if(id === 'mirror_corr' || id === 'mirror_bath') {
+if(G.day <= 2) say('','Ты видишь свое отражение. Оно улыбается. Ты не улыбаешься.');
+else if(G.day <= 6) { say('','Отражение осталось стоять, когда ты отошел.'); G.distort = 2; }
+else say('','В зеркале не ты. В зеркале ТО, что охотится на тебя.');
+}
+if(id === 'closet') {
+if(G.day <= 6) say('','В шкафу пахнет нафталином и... чем-то сладковатым. Гнилым.');
+else say('','ПРЯТАТЬСЯ В ШКАФУ — ○');
+}
+if(id === 'bath') {
+if(G.day <= 6) say('','Вода в ванне черная. И теплая.');
+else say('','ПРЯТАТЬСЯ В ВАННЕ — ○');
+}
+if(id === 'lamp') {
+G.flicker = 0.8;
+say('','Лампа мигнула. На мгновение комната стала другой. Красной.');
+}
+if(id === 'sofa') {
+if(G.day >= 3 && G.day <= 6) say('Дима', 'Эй, освободи диван! Мы тут смотрим... что-то странное по телеку.');
+else if(G.day === 7) say('','ПРЯТАТЬСЯ ЗА ДИВАНОМ — ○');
+else say('','На диване вмятина. Словно кто-то долго сидел. Но ты один.');
+}
+if(id === 'sink') {
+if(G.day <= 2) say('','Вода течет ржавая. Потом — чистая. Потом — темная.');
+else say('','Из крана течет что-то густое. Теплое.');
+}
+}
+
+function tryHide() {
+if(!G.chaseActive) return false;
+const room = ROOMS[G.room];
+for(let h of room.hideSpots) {
+const cx = h.x + h.w/2, cy = h.y + h.h/2;
+if(Math.hypot(cx - G.player.x, cy - G.player.y) < 50) {
+G.player.hidden = true; G.hideTimer = 3 + rng() * 2;
+say('','Ты спрятался... Сердце колотится. Шаги приближаются...');
+return true;
+}
+}
+return false;
+}
+
+// ==================== UPDATE ====================
+function update(dt) {
+if(G.state === 'title' || G.state === 'screamer') return;
+if(G.state === 'dialog') { updateDialog(dt); return; }
+if(G.state === 'transition') { G.flicker = Math.max(0, G.flicker - dt); return; }
+if(G.state === 'ending') {
+G.endingTimer += dt;
+if(G.endingTimer > 4 && G.screamerPhase === 0) triggerScreamer();
+return;
+}
+
+updateTime(dt);
+updateHorror(dt);
+
+let speed = G.chaseActive ? 45 : 30;
+if(G.player.hidden) {
+G.hideTimer -= dt;
+if(G.hideTimer <= 0) { G.player.hidden = false; say('','Кажется, опасность миновала... Пока что.'); }
+return;
+}
+
+let mx = 0, my = 0;
+if(keys.up) my -= 1; if(keys.down) my += 1;
+if(keys.left) mx -= 1; if(keys.right) mx += 1;
+if(mx !== 0 || my !== 0) {
+const len = Math.hypot(mx, my); mx /= len; my /= len;
+if(keys.cir && G.chaseActive) speed *= 1.5;
+G.player.x += mx * speed * dt; G.player.y += my * speed * dt;
+if(Math.abs(mx) > Math.abs(my)) G.player.dir = mx > 0 ? 'right' : 'left';
+else G.player.dir = my > 0 ? 'down' : 'up';
+G.player.frame += dt * 8;
+} else G.player.frame = 0;
+
+const room = ROOMS[G.room];
+G.player.x = Math.max(20, Math.min(room.w - 20, G.player.x));
+G.player.y = Math.max(40, Math.min(room.h - 20, G.player.y));
+
+for(let d of room.doors) {
+if(G.player.x > d.x && G.player.x < d.x + d.w && G.player.y > d.y && G.player.y < d.y + d.h) {
+G.room = d.to;
+const sp = SPAWN[d.to];
+if(d.side === 'top') { G.player.x = d.x + d.w/2; G.player.y = ROOMS[d.to].h - 25; }
+else if(d.side === 'bottom') { G.player.x = d.x + d.w/2; G.player.y = 25; }
+else if(d.side === 'left') { G.player.x = ROOMS[d.to].w - 25; G.player.y = d.y + d.h/2; }
+else if(d.side === 'right') { G.player.x = 25; G.player.y = d.y + d.h/2; }
+G.flicker = 0.3; break;
+}
+}
+
+if(keysPressed.x) { keysPressed.x = false; interact(); }
+if(keysPressed.cir) { keysPressed.cir = false; if(G.chaseActive) tryHide(); }
+
+if(G.day >= 3 && G.day <= 6 && G.friends.length > 0) updateFriends(dt);
+if(G.chaseActive) updateMonsters(dt);
+updateEvents(dt);
+}
+
+function updateHorror(dt) {
+G.flicker = Math.max(0, G.flicker - dt * 2);
+G.shake = Math.max(0, G.shake - dt * 5);
+G.distort = Math.max(0, G.distort - dt * 0.5);
+if(G.day >= 2 && rng() < 0.002 * G.day) G.flicker = 0.3 + rng() * 0.5;
+if(G.day >= 3 && rng() < 0.001 * G.day) G.shake = 0.5 + rng();
+if(G.day >= 4 && rng() < 0.001) G.distort = 1;
+}
+
+function updateFriends(dt) {
+for(let f of G.friends) {
+f.timer = (f.timer || 0) + dt;
+if(f.timer > 3 + rng() * 4) { f.timer = 0; f.tx = 40 + rng() * 240; f.ty = 50 + rng() * 100; }
+f.x += (f.tx - f.x) * dt * 0.5; f.y += (f.ty - f.y) * dt * 0.5;
+}
+}
+
+function updateMonsters(dt) {
+for(let m of G.monsters) {
+if(m.room === G.room && !G.player.hidden) {
+const dx = G.player.x - m.x, dy = G.player.y - m.y;
+const dist = Math.hypot(dx, dy);
+if(dist > 5) { m.x += (dx/dist) * m.speed * 40 * dt; m.y += (dy/dist) * m.speed * 40 * dt; }
+if(dist < 20) {
+say('','Тебя поймали... Но все начинается сначала. Полночь еще не наступила.');
+G.player.x = SPAWN[G.room].x; G.player.y = SPAWN[G.room].y;
+G.player.hidden = true; G.hideTimer = 2;
+}
+} else {
+m.timer += dt;
+if(m.timer > 5 + rng() * 5) {
+m.timer = 0;
+if(rng() < 0.3) { m.room = G.room; m.x = G.player.x + (rng() - 0.5) * 100; m.y = G.player.y + (rng() - 0.5) * 100; }
+}
+}
+}
+}
+
+function updateEvents(dt) {
+if(G.day <= 2 && !G.eventFlags.footsteps && G.hour >= 21 && rng() < 0.01) {
+G.eventFlags.footsteps = true;
+say('','Ты слышишь четкие шаги в коридоре. Тяжелые. Медленные. Кто-то ходит.'); G.shake = 1;
+}
+if(G.day === 2 && !G.eventFlags.moved && G.hour >= 19) {
+G.eventFlags.moved = true; say('','Стул стоит у двери. Ты не ставил его там.');
+}
+if(G.day === 3 && !G.eventFlags.friendsNotice && G.hour >= 22) {
+G.eventFlags.friendsNotice = true;
+say('Кирилл', 'Ребят... я слышал, как кто-то шептал из вентиляции. Это не ветер.');
+say('Артем', '...Может, нам правда стоит уйти?');
+say('Дима', 'Да бросьте. Мы же вместе. Ничего не случится.');
+}
+if(G.day === 4 && !G.eventFlags.distort && G.hour >= 20) {
+G.eventFlags.distort = true; G.distort = 3;
+say('','На мгновение лицо Артема исказилось. Глаза слишком широко. Рот слишком узко. Потом все стало нормально.');
+}
+if(G.day === 5 && !G.eventFlags.suffocate && G.hour >= 19) {
+G.eventFlags.suffocate = true;
+say('','Воздух стал густым, как вода. Дышать трудно. Друзья сидят неподвижно. Смотрят в одну точку.');
+}
+if(G.day === 6 && !G.eventFlags.reality && G.hour >= 21) {
+G.eventFlags.reality = true;
+say('','Стены дышат. Обои шевелятся. Дима смеется, но звук идет с задержкой. Артем моргает в такт твоему сердцебиению.');
+G.flicker = 2;
+}
+}
+
+function startEnding() {
+G.state = 'ending'; G.chaseActive = false; G.endingTimer = 0;
+say('','Ты просыпаешься в своей кровати. Мягкий свет утреннего солнца. Все было сном. Кошмарным, но всего лишь сном...');
+setTimeout(() => { say('','Ты выдыхаешь с облегчением. Сердце успокаивается. Все хорошо. Все...'); }, 3000);
+}
+
+function triggerScreamer() {
+G.screamerPhase = 1; G.state = 'screamer';
+document.getElementById('screamer').style.display = 'flex';
+drawScaryFace();
+let flash = 0;
+const flashInt = setInterval(() => {
+flash++;
+document.getElementById('screamer').style.background = flash % 2 === 0 ? '#000' : '#300';
+if(flash > 10) clearInterval(flashInt);
+}, 100);
+}
+
+// ==================== DRAWING ====================
+function draw() {
+ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+if(G.state === 'title') return;
+if(G.state === 'screamer') return;
+
+let sx = 0, sy = 0;
+if(G.shake > 0) { sx = (rng() - 0.5) * G.shake * 6; sy = (rng() - 0.5) * G.shake * 6; }
+ctx.save(); ctx.translate(sx, sy);
+if(G.distort > 0) ctx.translate((rng()-0.5)G.distort3, (rng()-0.5)G.distort3);
+
+const room = ROOMS[G.room];
+let camX = G.player.x - W/2, camY = G.player.y - H/2;
+camX = Math.max(0, Math.min(room.w - W, camX));
+camY = Math.max(0, Math.min(room.h - H, camY));
+ctx.save(); ctx.translate(-camX, -camY);
+
+ctx.fillStyle = room.floor; ctx.fillRect(0, 0, room.w, room.h);
+ctx.fillStyle = 'rgba(0,0,0,0.05)';
+for(let tx = 0; tx < room.w; tx += 20) {
+for(let ty = 0; ty < room.h; ty += 20) {
+if((tx + ty) % 40 === 0) ctx.fillRect(tx, ty, 20, 20);
+}
+}
+
+ctx.fillStyle = room.color;
+for(let w of room.walls) {
+ctx.fillRect(w.x, w.y, w.w, w.h);
+ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(w.x, w.y + w.h - 3, w.w, 3); ctx.fillStyle = room.color;
+}
+
+for(let d of room.doors) {
+ctx.fillStyle = '#1a120a'; ctx.fillRect(d.x, d.y, d.w, d.h);
+ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.strokeRect(d.x, d.y, d.w, d.h);
+}
+
+for(let o of room.objects) {
+ctx.fillStyle = o.color; ctx.fillRect(o.x, o.y, o.w, o.h);
+ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1; ctx.strokeRect(o.x, o.y, o.w, o.h);
+if(o.interact) {
+const cx = o.x + o.w/2, cy = o.y + o.h/2;
+const dist = Math.hypot(cx - G.player.x, cy - G.player.y);
+if(dist < 40) {
+ctx.strokeStyle = 'rgba(255,255,200,0.4)'; ctx.strokeRect(o.x-1, o.y-1, o.w+2, o.h+2);
+G.hint = '✕ ' + o.name; G.hintTimer = 0.5;
+}
+}
+}
+
+if(G.day >= 3 && G.day <= 6) {
+for(let f of G.friends) {
+drawCharacter(f.x, f.y, f.shirt, f.hair, f.face, G.distort > 1);
+ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(f.x - 15, f.y - 22, 30, 8);
+ctx.fillStyle = '#aaa'; ctx.font = '6px monospace'; ctx.textAlign = 'center'; ctx.fillText(f.name, f.x, f.y - 16);
+}
+}
+
+if(G.chaseActive) {
+for(let m of G.monsters) {
+if(m.room === G.room) drawMonster(m.x, m.y, m.color);
+}
+}
+
+if(!G.player.hidden) drawCharacter(G.player.x, G.player.y, '#48a', '#321', '#cba', false, true);
+
+ctx.restore(); // camera
+ctx.restore(); // shake
+
+drawLighting(camX, camY);
+
+if(G.flicker > 0) { ctx.fillStyle = rgba(0,0,0,${G.flicker * 0.7})`; ctx.fillRect(0, 0, W, H); }
+
+const grad = ctx.createRadialGradient(W/2, H/2, 60, W/2, H/2, 140);
+grad.addColorStop(0, 'rgba(0,0,0,0)');
+grad.addColorStop(1, rgba(0,0,0,${0.5 + G.day * 0.05})`);
+ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+if(G.hintTimer > 0) {
+G.hintTimer -= 0.016;
+document.getElementById('hint-text').textContent = G.hint;
+document.getElementById('hint-text').style.display = 'block';
+} else document.getElementById('hint-text').style.display = 'none';
+}
+
+function drawCharacter(x, y, shirt, hair, face, distorted, isPlayer = false) {
+const bob = Math.sin(G.player.frame) * 2;
+const yb = y + bob;
+ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x - 6, y + 2, 12, 4);
+ctx.fillStyle = shirt;
+if(distorted && rng() < 0.3) ctx.fillStyle = '#511';
+ctx.fillRect(x - 5, yb - 6, 10, 8);
+ctx.fillStyle = face;
+if(distorted && rng() < 0.3) ctx.fillStyle = '#ddd';
+ctx.fillRect(x - 4, yb - 14, 8, 8);
+ctx.fillStyle = hair; ctx.fillRect(x - 5, yb - 16, 10, 4);
+if(distorted && rng() < 0.5) {
+ctx.fillStyle = '#000'; ctx.fillRect(x - 3, yb - 12, 6, 3);
+} else {
+ctx.fillStyle = '#000'; ctx.fillRect(x - 3, yb - 12, 2, 2); ctx.fillRect(x + 1, yb - 12, 2, 2);
+}
+ctx.fillStyle = '#222'; ctx.fillRect(x - 4, yb + 2, 3, 5); ctx.fillRect(x + 1, yb + 2, 3, 5);
+if(isPlayer) { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(x - 1, yb - 18, 2, 2); }
+}
+
+function drawMonster(x, y, color) {
+const twitch = Math.sin(Date.now() / 50) * 2;
+ctx.fillStyle = color; ctx.fillRect(x - 8 + twitch, y - 10, 16, 12);
+ctx.fillStyle = '#ddd'; ctx.fillRect(x - 10, y - 22, 20, 12);
+ctx.fillStyle = '#000'; ctx.fillRect(x - 8, y - 18, 6, 6); ctx.fillRect(x + 2, y - 18, 6, 6);
+ctx.fillStyle = '#f00'; ctx.fillRect(x - 7, y - 17, 2, 2); ctx.fillRect(x + 3, y - 17, 2, 2);
+ctx.fillStyle = '#200'; ctx.fillRect(x - 6, y - 10, 12, 4);
+ctx.fillStyle = '#fff';
+for(let i = 0; i < 5; i++) ctx.fillRect(x - 5 + i * 3, y - 10, 1, 3);
+ctx.fillStyle = color; ctx.fillRect(x - 14, y - 5, 8, 3); ctx.fillRect(x + 6, y - 2, 8, 3); ctx.fillRect(x - 3, y + 5, 3, 8);
+}
+
+function drawLighting(cx, cy) {
+const px = G.player.x - cx, py = G.player.y - cy;
+const grad = ctx.createRadialGradient(px, py, 20, px, py, 100 + G.day * 5);
+grad.addColorStop(0, 'rgba(0,0,0,0)');
+grad.addColorStop(0.5, rgba(0,0,0,${0.3 + G.day * 0.08})); grad.addColorStop(1,rgba(0,0,0,${0.7 + G.day * 0.05}));
+ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+}
+
+// ==================== SCARY FACE ====================
+function drawScaryFace() {
+const sc = document.getElementById('screamer-canvas');
+const sctx = sc.getContext('2d');
+sctx.imageSmoothingEnabled = false;
+sctx.fillStyle = '#000'; sctx.fillRect(0, 0, 320, 180);
+
+const s = 4, ox = 60, oy = 10;
+function rect(x, y, w, h, c) { sctx.fillStyle = c; sctx.fillRect(x, y, w, h); }
+
+// Hair
+rect(ox+20s, oy, 120s, 30s, '#222');
+rect(ox+10s, oy+10s, 20s, 40s, '#222');
+rect(ox+130s, oy+10s, 20s, 40s, '#222');
+rect(ox, oy+30s, 20s, 50s, '#222');
+rect(ox+140s, oy+30s, 20s, 50s, '#222');
+rect(ox+10s, oy+70s, 15s, 20s, '#222');
+rect(ox+135s, oy+70s, 15s, 20s, '#222');
+
+// Face
+rect(ox+30s, oy+25s, 100s, 90s, '#e8d5c4');
+rect(ox+25s, oy+35s, 10s, 60s, '#e8d5c4');
+rect(ox+125s, oy+35s, 10s, 60s, '#e8d5c4');
+rect(ox+35s, oy+115s, 90s, 10s, '#e8d5c4');
+
+// Left eye (huge)
+rect(ox+40s, oy+45s, 35s, 30s, '#fff');
+rect(ox+45s, oy+40s, 25s, 5s, '#fff');
+rect(ox+45s, oy+75s, 25s, 5s, '#fff');
+rect(ox+35s, oy+50s, 5s, 20s, '#fff');
+rect(ox+75s, oy+50s, 5s, 20s, '#fff');
+rect(ox+52s, oy+55s, 10s, 12s, '#000');
+rect(ox+55s, oy+52s, 4s, 3s, '#000');
+rect(ox+55s, oy+67s, 4s, 3s, '#000');
+
+// Right eye (huge)
+rect(ox+85s, oy+45s, 35s, 30s, '#fff');
+rect(ox+90s, oy+40s, 25s, 5s, '#fff');
+rect(ox+90s, oy+75s, 25s, 5s, '#fff');
+rect(ox+80s, oy+50s, 5s, 20s, '#fff');
+rect(ox+120s, oy+50s, 5s, 20s, '#fff');
+rect(ox+97s, oy+55s, 10s, 12s, '#000');
+rect(ox+100s, oy+52s, 4s, 3s, '#000');
+rect(ox+100s, oy+67s, 4s, 3s, '#000');
+
+// Eyebrows
+rect(ox+45s, oy+30s, 25s, 5s, '#222');
+rect(ox+90s, oy+30s, 25s, 5s, '#222');
+
+// Nose
+rect(ox+72s, oy+75s, 16s, 8s, '#d4c4b0');
+
+// Mouth (screaming)
+rect(ox+45s, oy+90s, 70s, 40s, '#300');
+rect(ox+50s, oy+95s, 60s, 30s, '#100');
+// Teeth
+rect(ox+52s, oy+92s, 8s, 6s, '#eee');
+rect(ox+65s, oy+91s, 6s, 6s, '#ddd');
+rect(ox+78s, oy+92s, 8s, 6s, '#eee');
+rect(ox+92s, oy+91s, 6s, 6s, '#ddd');
+rect(ox+102s, oy+92s, 8s, 6s, '#eee');
+rect(ox+55s, oy+122s, 6s, 6s, '#ccc');
+rect(ox+68s, oy+123s, 8s, 6s, '#ccc');
+rect(ox+82s, oy+122s, 6s, 6s, '#ccc');
+rect(ox+95s, oy+123s, 8s, 6s, '#ccc');
+
+// Shirt
+rect(ox+20s, oy+130s, 120s, 40s, '#4488cc');
+rect(ox+70s, oy+130s, 20s, 10s, '#3366aa');
+}
+
+// ==================== MAIN LOOP ====================
+function startGame() {
+document.getElementById('title-screen').style.display = 'none';
+G.state = 'gameplay';
+setupDay(1);
+gameRunning = true;
+lastTime = performance.now();
+requestAnimationFrame(loop);
+}
+
+function loop(time) {
+if(!gameRunning) return;
+const dt = Math.min((time - lastTime) / 1000, 0.1);
+lastTime = time;
+update(dt);
+draw();
+requestAnimationFrame(loop);
+}
+
+// Start
+// game starts on button press
+</script>
+</body>
+</html>
